@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import { env } from './config/env';
 import authRoutes from './modules/auth/auth.routes';
 import mediaRoutes from './modules/media/media.routes';
+import savedExerciseRoutes from './modules/savedExercise/savedExercise.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -25,6 +26,7 @@ app.get('/health', (req, res) => {
 // Mount modules
 app.use('/api/auth', authRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/saved-exercises', savedExerciseRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
