@@ -79,6 +79,44 @@ export class MediaController {
     res.json({ streamUrl });
   }
 
+  /** GET /api/media/stream/:id
+   *  Streams the video using HTTP 206 Partial Content (acts as a proxy for R2).
+   */
+  static async streamVideo(req: Request, res: Response, next: NextFunction) {
+    try {
+      const asset = await MediaAsset.findById(req.params.id).lean();
+      if (!asset) return next(new AppError('Media not found', 404, 'NOT_FOUND'));
+
+      const range = req.headers.range;
+      const r2Object = await R2Service.getObjectStream(asset.r2Key, range);
+
+      if (r2Object.ContentRange) {
+        res.status(206);
+        res.setHeader('Content-Range', r2Object.ContentRange);
+      } else {
+        res.status(200);
+      }
+
+      if (r2Object.ContentLength) res.setHeader('Content-Length', r2Object.ContentLength.toString());
+      if (r2Object.ContentType) res.setHeader('Content-Type', r2Object.ContentType);
+      res.setHeader('Accept-Ranges', 'bytes');
+
+      // The Body is a stream in Node.js when using the AWS SDK
+      const stream = r2Object.Body as NodeJS.ReadableStream;
+      stream.pipe(res);
+      
+      stream.on('error', (err) => {
+        console.error('Error streaming video:', err);
+        if (!res.headersSent) res.status(500).end();
+      });
+
+    } catch (error: any) {
+      if (error.name === 'NoSuchKey') return next(new AppError('File not found in R2', 404, 'NOT_FOUND'));
+      console.error('Stream error:', error);
+      next(error);
+    }
+  }
+
   // --- Admin Routes ---
 
   /** POST /api/media/upload-url

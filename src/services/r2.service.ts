@@ -62,6 +62,20 @@ export class R2Service {
   }
 
   /**
+   * Gets an object stream from R2 with an optional Range header.
+   * @param r2Key The object key in R2
+   * @param range The HTTP Range header string (e.g. "bytes=0-1000")
+   */
+  static async getObjectStream(r2Key: string, range?: string) {
+    const command = new GetObjectCommand({
+      Bucket: env.R2_BUCKET_NAME,
+      Key: r2Key,
+      Range: range,
+    });
+    return await r2Client.send(command);
+  }
+
+  /**
    * Lists objects in the bucket with a given prefix.
    * @param prefix The prefix to list (e.g., 'videos/abs/')
    * @returns Array of object keys

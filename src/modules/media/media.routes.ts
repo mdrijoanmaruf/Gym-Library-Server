@@ -9,6 +9,7 @@ const router = Router();
 // Public Routes (No authentication required to view library)
 router.get('/categories', asyncHandler(MediaController.categories));
 router.get('/', asyncHandler(MediaController.list));
+router.get('/stream/:id', asyncHandler(MediaController.streamVideo));
 router.get('/:id', asyncHandler(MediaController.getById));
 router.get('/:id/url', asyncHandler(MediaController.getUrl));
 
