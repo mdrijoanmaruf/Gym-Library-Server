@@ -6,16 +6,14 @@ import { asyncHandler } from '../../utils/asyncHandler';
 
 const router = Router();
 
-// All media routes require authentication
-router.use(authenticate);
-
-// Public Routes (Authenticated Users)
+// Public Routes (No authentication required to view library)
 router.get('/categories', asyncHandler(MediaController.categories));
 router.get('/', asyncHandler(MediaController.list));
 router.get('/:id', asyncHandler(MediaController.getById));
 router.get('/:id/url', asyncHandler(MediaController.getUrl));
 
-// Admin Routes
+// Admin Routes (Require authentication & admin role)
+router.use(authenticate);
 router.post('/upload-url', requireAdmin, asyncHandler(MediaController.getUploadUrl));
 router.post('/', requireAdmin, asyncHandler(MediaController.create));
 router.patch('/:id', requireAdmin, asyncHandler(MediaController.update));
