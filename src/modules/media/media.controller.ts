@@ -42,9 +42,27 @@ export class MediaController {
   }
 
   /** GET /api/media/categories */
-  static async categories(_req: Request, res: Response) {
-    const cats = await MediaAsset.distinct('category', { isPublished: true });
-    res.json({ categories: ['All', ...cats.sort()] });
+  static async categories(req: Request, res: Response) {
+    const type = req.query.type as string;
+    
+    const filter: Record<string, unknown> = { isPublished: true };
+    if (type) filter.type = type;
+
+    const [total, categoryCounts] = await Promise.all([
+      MediaAsset.countDocuments(filter),
+      MediaAsset.aggregate([
+        { $match: filter },
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+      ])
+    ]);
+
+    const categories = [
+      { name: 'All', count: total },
+      ...categoryCounts.map(c => ({ name: c._id, count: c.count }))
+    ];
+
+    res.json({ categories });
   }
 
   /** GET /api/media/:id 
