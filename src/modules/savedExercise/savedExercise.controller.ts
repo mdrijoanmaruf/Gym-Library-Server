@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { SavedExercise } from '../../models/SavedExercise';
+import { R2Service } from '../../services/r2.service';
 
 export class SavedExerciseController {
   // Add or update a saved exercise
@@ -51,7 +52,19 @@ export class SavedExerciseController {
       results = results.filter(se => (se.mediaId as any).category === category);
     }
 
-    return res.status(200).json({ data: results });
+    // Enhance with pre-signed URLs
+    const enhancedResults = await Promise.all(results.map(async (se: any) => {
+      const media = se.mediaId;
+      if (media && media.r2Key) {
+        media.streamUrl = await R2Service.generatePresignedGetUrl(media.r2Key);
+        if (media.thumbnailR2Key) {
+          media.thumbnailUrl = await R2Service.generatePresignedGetUrl(media.thumbnailR2Key);
+        }
+      }
+      return se;
+    }));
+
+    return res.status(200).json({ data: enhancedResults });
   }
 
   // Get just the array of mediaIds the user has saved

@@ -20,6 +20,12 @@ const envSchema = z.object({
   REFRESH_TOKEN_EXPIRES: z.string().default('30d'),
   PASSWORD_RESET_TOKEN_SECRET: z.string().default('supersecret_reset'),
   PASSWORD_RESET_EXPIRES: z.string().default('1h'),
+  R2_ACCOUNT_ID: z.string().default(''),
+  R2_ACCESS_KEY_ID: z.string().default(''),
+  R2_SECRET_ACCESS_KEY: z.string().default(''),
+  R2_BUCKET_NAME: z.string().default('gym-library-media'),
+  R2_PUBLIC_DOMAIN: z.string().optional(),
+  PRESIGNED_URL_EXPIRES: z.string().default('3600'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
