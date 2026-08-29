@@ -46,4 +46,17 @@ export class AuthController {
     res.clearCookie('refresh_token');
     res.status(200).json({ message: 'Logged out successfully' });
   }
+
+  static async getUsers(req: Request, res: Response) {
+    const role = req.query.role as string;
+    const users = await AuthService.getUsers(role);
+    res.status(200).json({ success: true, users });
+  }
+
+  static async updateUserRole(req: Request, res: Response) {
+    const { id } = req.params;
+    const { role } = req.body;
+    const user = await AuthService.updateUserRole(id, role);
+    res.status(200).json({ success: true, user });
+  }
 }

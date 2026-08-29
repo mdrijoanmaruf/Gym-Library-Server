@@ -2,7 +2,7 @@ import { User } from '../../models/User';
 import { AccessRequest } from '../../models/AccessRequest';
 import { hashPassword, comparePassword } from '../../utils/password';
 import { signAccessToken, signRefreshToken } from '../../utils/jwt';
-import { UnauthorizedError, ConflictError } from '../../utils/AppError';
+import { UnauthorizedError, ConflictError, NotFoundError } from '../../utils/AppError';
 
 export class AuthService {
   static async register(data: { name: string; email: string; password: string }) {
@@ -56,28 +56,29 @@ export class AuthService {
     await user.save();
 
     return {
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, status: user.status },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, status: user.status, image: user.image },
       accessToken,
       refreshToken,
     };
   }
 
-  static async googleLogin(data: { email: string; name: string }) {
+  static async googleLogin(data: { email: string; name: string; image?: string }) {
     let user = await User.findOne({ email: data.email });
 
     if (!user) {
       // Create user if not exists
-      // Google users are auto-approved for this implementation, or you can set to pending.
-      // Let's set to approved for seamless Google login, or pending if you want manual approval.
-      // The spec says "creates matching access_requests row" for normal register. 
-      // For Google, we'll set to approved for a better UX, or you can adjust this later.
       user = await User.create({
         name: data.name,
         email: data.email,
+        image: data.image,
         passwordHash: await hashPassword(Math.random().toString(36).slice(-10)), // Random placeholder password
         status: 'approved', // Auto-approve Google users for now
         role: 'user',
       });
+    } else if (data.image && user.image !== data.image) {
+      user.image = data.image;
+      // We don't save immediately here to avoid a redundant save if we also save tokens later, 
+      // but let's just do it securely or wait for the token save below.
     }
 
     const payload = { userId: user._id.toString(), role: user.role, status: user.status };
@@ -88,9 +89,31 @@ export class AuthService {
     await user.save();
 
     return {
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, status: user.status },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, status: user.status, image: user.image },
       accessToken,
       refreshToken,
     };
+  }
+
+  static async getUsers(role?: string) {
+    const filter = role && role !== 'all' ? { role } : {};
+    return await User.find(filter).select('-passwordHash -refreshTokens').sort({ createdAt: -1 });
+  }
+
+  static async updateUserRole(userId: string, newRole: string) {
+    if (!['user', 'admin'].includes(newRole)) {
+      throw new ConflictError('Invalid role');
+    }
+    const user = await User.findById(userId);
+    if (!user) throw new NotFoundError('User not found');
+    
+    // Check if it's the super admin
+    if (user.email === 'rijoanmaruf@gmail.com') {
+      throw new ConflictError('Cannot modify super admin role');
+    }
+
+    user.role = newRole as any;
+    await user.save();
+    return { id: user._id, name: user.name, email: user.email, role: user.role };
   }
 }

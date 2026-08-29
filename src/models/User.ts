@@ -9,6 +9,7 @@ export interface IUser extends Document {
   passwordHash: string;
   role: UserRole;
   status: UserStatus;
+  image?: string;
   refreshTokens: string[];
   passwordResetToken?: string;
   passwordResetExpires?: Date;
@@ -37,6 +38,7 @@ const UserSchema = new Schema<IUser>(
       enum: ['pending', 'approved', 'rejected', 'suspended'],
       default: 'pending',
     },
+    image: { type: String },
     refreshTokens: [{ type: String }],
     passwordResetToken: { type: String },
     passwordResetExpires: { type: Date },

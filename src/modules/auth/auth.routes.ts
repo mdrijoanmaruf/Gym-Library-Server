@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AuthController } from './auth.controller';
 import { validate } from '../../middleware/validate';
 import { authenticate } from '../../middleware/authenticate';
+import { requireAdmin } from '../../middleware/requireAdmin';
 import { authLimiter } from '../../middleware/rateLimiters';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { registerSchema, loginSchema, googleAuthSchema } from './auth.validation';
@@ -39,6 +40,20 @@ router.get(
   '/me',
   authenticate,
   asyncHandler(AuthController.me)
+);
+
+router.get(
+  '/users',
+  authenticate,
+  requireAdmin,
+  asyncHandler(AuthController.getUsers)
+);
+
+router.put(
+  '/users/:id/role',
+  authenticate,
+  requireAdmin,
+  asyncHandler(AuthController.updateUserRole)
 );
 
 export default router;
