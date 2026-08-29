@@ -1,101 +1,122 @@
-# GymLibrary Server 🏋️‍♂️
+<div align="center">
+  <img src="https://raw.githubusercontent.com/mdrijoanmaruf/Gym-Library-Client/main/public/logo.png" alt="GymLibrary Logo" width="250" />
+  
+  # GymLibrary 🏋️‍♂️ (Backend Server)
+  
+  **The high-performance API powering the ultimate modern fitness library.**
+  
+  [Frontend Repo](https://github.com/mdrijoanmaruf/Gym-Library-Client) • [Live Demo](https://gym.rijoan.com)
 
-The backend API for GymLibrary, providing secure authentication, media streaming (shorts-style videos), and resource management. Built with robust and modern backend technologies.
+  [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat&logo=node.js)](https://nodejs.org/)
+  [![Express](https://img.shields.io/badge/Express.js-4.x-000000?style=flat&logo=express)](https://expressjs.com/)
+  [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat&logo=mongodb)](https://www.mongodb.com/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
+  [![Cloudflare R2](https://img.shields.io/badge/Cloudflare-R2-F38020?style=flat&logo=cloudflare)](https://www.cloudflare.com/)
+</div>
+
+<br />
+
+The GymLibrary Backend is a robust, scalable, and secure RESTful API built with **Node.js, Express, and TypeScript**. It acts as the core engine for the GymLibrary ecosystem, managing user data, workout plans, and orchestrating secure edge media delivery via Cloudflare R2.
+
+---
+
+## ✨ Key Capabilities
+
+- **☁️ Cloudflare R2 Integration:** Generates secure, short-lived pre-signed URLs for edge streaming. Offloads heavy media serving from the backend directly to Cloudflare's global edge network.
+- **🔐 Secure Authentication:** Seamlessly integrates with the frontend's NextAuth implementation, storing user credentials securely using `bcryptjs`.
+- **📅 Workout Plan Management:** Stores and manages personalized user workout schedules (Saved Exercises by Day of the Week) in MongoDB.
+- **🛡️ Enterprise-grade Security:** Hardened with `helmet`, strict `cors` policies, and comprehensive request validation using `Zod`.
+- **🚀 Advanced Seeding Scripts:** Includes heavily automated, robust TypeScript scripts (`seed-and-upload.ts`) to effortlessly sync massive local media directories to Cloudflare R2 and MongoDB in one go.
+
+---
 
 ## 🚀 Tech Stack
 
 - **Runtime Environment:** [Node.js](https://nodejs.org/)
-- **Framework:** [Express](https://expressjs.com/)
+- **Framework:** [Express.js](https://expressjs.com/)
 - **Language:** [TypeScript](https://www.typescriptlang.org/)
 - **Database:** [MongoDB](https://www.mongodb.com/) & [Mongoose](https://mongoosejs.com/)
-- **Authentication:** JWT (JSON Web Tokens) with HTTP-only cookies
+- **Edge Storage SDK:** [@aws-sdk/client-s3](https://aws.amazon.com/sdk-for-javascript/) (for R2 Pre-signed URLs)
 - **Validation:** [Zod](https://zod.dev/)
-- **Security:** Helmet, CORS, Express Rate Limit, bcryptjs
 
-## ⚙️ Prerequisites
-
-Before you begin, ensure you have the following installed:
-- Node.js (v18 or higher recommended)
-- npm or yarn
-- MongoDB (local or Atlas cluster)
-
-## 🛠️ Installation & Setup
-
-1. **Clone the repository** (if you haven't already):
-   ```bash
-   git clone <your-repo-url>
-   cd gym-library-server
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Set up your environment variables:**
-   Create a `.env` file in the root directory (you can use `.env.example` if available) and add the following variables:
-
-   ```env
-   PORT=5000
-   NODE_ENV=development
-   MONGO_URI=mongodb://localhost:27017/gym-library # Or your MongoDB Atlas URI
-   JWT_SECRET=your_super_secret_jwt_key
-   CLIENT_URL=http://localhost:3000
-   ```
-
-4. **Seed the database (Optional):**
-   If you want to populate your local database with initial media assets:
-   ```bash
-   npx ts-node src/scripts/seed-media.ts
-   ```
-
-5. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-   The server will start on `http://localhost:5000`.
-
-## 📜 Available Scripts
-
-- `npm run dev`: Starts the application in development mode with `nodemon` and `ts-node` for hot-reloading.
-- `npm run build`: Compiles the TypeScript source code into JavaScript in the `dist` directory.
-- `npm start`: Runs the compiled output in the `dist` directory (intended for production).
+---
 
 ## 🗂️ Project Structure
 
 ```text
 src/
-├── config/       # Environment and Database configuration
-├── middleware/   # Custom Express middlewares (e.g., errorHandler, auth)
-├── models/       # Mongoose Schemas (User, MediaAsset, AccessRequest)
-├── modules/      # Domain-driven feature modules (Auth, Media)
-│   ├── auth/     # Authentication routes and controllers
-│   └── media/    # Media streaming routes and controllers
-├── scripts/      # Standalone utility scripts (e.g., DB seeding)
-├── utils/        # Shared helper functions
-├── app.ts        # Express application setup and middleware mounting
-└── server.ts     # Application entry point & server listener
+├── config/       # Environment, AWS/R2 SDK, and Database config
+├── middleware/   # Express middlewares (errorHandler, requireAdmin)
+├── models/       # Mongoose Schemas (User, MediaAsset, SavedExercise)
+├── modules/      # Domain-driven feature modules
+│   ├── auth/     # Authentication routes and logic
+│   ├── media/    # Media & Pre-signed URL orchestration
+│   └── savedExercise/ # Workout plan management
+├── scripts/      # Advanced DB & R2 seeding/migration tools
+├── services/     # Core business logic (R2Service)
+├── utils/        # Shared helper functions (AppError, asyncHandler)
+├── app.ts        # Express application setup
+└── server.ts     # Application entry point
 ```
 
-## 🔌 API Endpoints
+---
 
-### Health Check
-- `GET /health` - Check if the server is running.
+## ⚙️ Local Setup & Installation
 
-### Authentication (`/api/auth`)
-- `POST /register` - Register a new user account.
-- `POST /login` - Authenticate a user and set a session cookie.
-- `POST /logout` - Clear the user session cookie.
-- `GET /me` - Get the current authenticated user's profile.
+### 1. Prerequisites
+- Node.js (v18 or higher recommended)
+- A MongoDB instance (Local or Atlas)
+- A Cloudflare R2 Bucket and API Tokens
 
-### Media (`/api/media`)
-- `GET /api/media` - Fetch a list of available media assets.
-- `GET /api/media/stream/:id` - Stream a specific media video (supports partial content ranges for HTML5 video players).
+### 2. Clone and Install
+```bash
+git clone https://github.com/mdrijoanmaruf/Gym-Library-Server.git
+cd Gym-Library-Server
+npm install
+```
 
-## 🔒 Security Measures
+### 3. Environment Configuration
+Create a `.env.local` file in the root directory:
 
-- **HTTP-only Cookies**: JWTs are stored in HTTP-only cookies to prevent XSS attacks.
-- **Helmet**: Secures Express apps by setting various HTTP headers.
-- **CORS Configured**: Restricted to the trusted client origin (`http://localhost:3000`).
-- **Rate Limiting**: Protects endpoints against brute-force and DDoS attacks.
-- **Password Hashing**: Uses `bcryptjs` before persisting user credentials.
+```env
+# Server Config
+PORT=5000
+NODE_ENV=development
+CLIENT_URL=http://localhost:3000
+
+# MongoDB Connection
+MONGODB_URI=mongodb://your_db_connection_string
+
+# Cloudflare R2 Credentials
+R2_ACCOUNT_ID=your_cloudflare_account_id
+R2_ACCESS_KEY_ID=your_r2_access_key
+R2_SECRET_ACCESS_KEY=your_r2_secret_key
+R2_BUCKET_NAME=gym-library-media
+PRESIGNED_URL_EXPIRES=3600
+```
+
+### 4. Running the Server
+```bash
+npm run dev
+```
+The server will start on `http://localhost:5000` with hot-reloading enabled.
+
+---
+
+## 📦 Media Seeding & Upload Scripts
+
+The server includes a powerful tool to automatically upload local media directories to Cloudflare R2 and sync them with MongoDB.
+
+1. Place your media in a `GYM/` directory in the root of the server, structured as:
+   `GYM / <Category> / <Video|GIF> / file.mp4`
+2. Run the unified uploader:
+   ```bash
+   npx ts-node src/scripts/seed-and-upload.ts
+   ```
+   *The script is idempotent—it will automatically skip files that have already been uploaded.*
+
+---
+
+<div align="center">
+  <p>Developed by <b><a href="https://rijoan.com">Md Rijoan Maruf</a></b></p>
+</div>
