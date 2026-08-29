@@ -11,6 +11,8 @@ import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
 
+import { connectDB } from './config/db';
+
 // Global Middleware
 app.use(helmet());
 app.use(cors({ 
@@ -20,6 +22,12 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
+
+// Ensure DB is connected for serverless environments (like Vercel)
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // Basic Health Route
 app.get('/health', (req, res) => {
