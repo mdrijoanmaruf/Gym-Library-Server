@@ -9,6 +9,9 @@ import { registerSchema, loginSchema, googleAuthSchema } from './auth.validation
 
 const router = Router();
 
+// Public route for avatars
+router.get('/avatar/:key(*)', asyncHandler(AuthController.getAvatarStream));
+
 router.post(
   '/register',
   authLimiter,
@@ -40,6 +43,18 @@ router.get(
   '/me',
   authenticate,
   asyncHandler(AuthController.me)
+);
+
+router.patch(
+  '/me',
+  authenticate,
+  asyncHandler(AuthController.updateMe)
+);
+
+router.post(
+  '/me/avatar/upload-url',
+  authenticate,
+  asyncHandler(AuthController.getAvatarUploadUrl)
 );
 
 router.get(
