@@ -2,6 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import { MediaAsset } from '../../models/MediaAsset';
 import { AppError } from '../../utils/AppError';
 import { R2Service } from '../../services/r2.service';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import crypto from 'crypto';
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegStatic from 'ffmpeg-static';
 
 export class MediaController {
   /** GET /api/media
@@ -164,6 +170,100 @@ export class MediaController {
     const asset = await MediaAsset.findByIdAndUpdate(req.params.id, req.body, { new: true }).lean();
     if (!asset) return next(new AppError('Media not found', 404, 'NOT_FOUND'));
     res.json(asset);
+  }
+
+  /** POST /api/media/:id/process
+   *  Process video via ffmpeg (Trim, Crop, Speed, Volume).
+   */
+  static async processVideo(req: Request, res: Response, next: NextFunction) {
+    try {
+      const asset = await MediaAsset.findById(req.params.id);
+      if (!asset) return next(new AppError('Media not found', 404, 'NOT_FOUND'));
+      if (asset.type !== 'video') return next(new AppError('Only videos can be processed', 400, 'BAD_REQUEST'));
+
+      const { trimStart, trimEnd, cropW, cropH, cropX, cropY, speed, volume } = req.body;
+
+      // Prepare temp files
+      const tmpDir = os.tmpdir();
+      const uniqueId = crypto.randomBytes(8).toString('hex');
+      const inputPath = path.join(tmpDir, `input_${uniqueId}.mp4`);
+      const outputPath = path.join(tmpDir, `output_${uniqueId}.mp4`);
+
+      // Set ffmpeg path
+      if (ffmpegStatic) ffmpeg.setFfmpegPath(ffmpegStatic);
+
+      // 1. Download file from R2
+      const objectStream = await R2Service.getObjectStream(asset.r2Key);
+      if (!objectStream) return next(new AppError('File not found in R2', 404, 'NOT_FOUND'));
+      
+      await new Promise<void>((resolve, reject) => {
+        const fileStream = fs.createWriteStream(inputPath);
+        (objectStream as any).pipe(fileStream);
+        fileStream.on('finish', resolve);
+        fileStream.on('error', reject);
+      });
+
+      // 2. Process with ffmpeg
+      await new Promise<void>((resolve, reject) => {
+        let command = ffmpeg(inputPath);
+
+        // Trim
+        if (trimStart !== undefined && trimStart >= 0) {
+          command = command.setStartTime(trimStart);
+        }
+        if (trimEnd !== undefined && trimEnd > (trimStart || 0)) {
+          command = command.setDuration(trimEnd - (trimStart || 0));
+        }
+
+        const vFilters: string[] = [];
+        const aFilters: string[] = [];
+
+        // Crop
+        if (cropW && cropH && cropW > 0 && cropH > 0) {
+          vFilters.push(`crop=${cropW}:${cropH}:${cropX || 0}:${cropY || 0}`);
+        }
+
+        // Speed
+        if (speed && speed !== 1) {
+          vFilters.push(`setpts=${1 / speed}*PTS`);
+          aFilters.push(`atempo=${speed}`);
+        }
+
+        // Volume
+        if (volume !== undefined && volume !== 1) {
+          aFilters.push(`volume=${volume}`);
+        }
+
+        if (vFilters.length > 0) command = command.videoFilters(vFilters);
+        if (aFilters.length > 0) command = command.audioFilters(aFilters);
+
+        command
+          .output(outputPath)
+          .on('end', () => resolve())
+          .on('error', (err) => reject(new Error(`FFmpeg error: ${err.message}`)))
+          .run();
+      });
+
+      // 3. Upload back to R2 (overwrite existing key)
+      await R2Service.uploadFile(asset.r2Key, outputPath, 'video/mp4');
+
+      // 4. Cleanup temp files
+      fs.unlinkSync(inputPath);
+      fs.unlinkSync(outputPath);
+
+      // 5. Optionally recalculate duration and save
+      // For simplicity, we can set it to the trim difference divided by speed if they exist
+      if (trimEnd !== undefined && trimStart !== undefined) {
+        asset.durationSeconds = (trimEnd - trimStart) / (speed || 1);
+        await asset.save();
+      }
+
+      res.json({ success: true, message: 'Video processed successfully' });
+
+    } catch (error) {
+      console.error("FFMPEG Processing Error:", error);
+      next(new AppError('Failed to process video', 500, 'SERVER_ERROR'));
+    }
   }
 
   /** DELETE /api/media/:id

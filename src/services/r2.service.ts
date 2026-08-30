@@ -4,6 +4,7 @@ import {
   DeleteObjectCommand,
   ListObjectsV2Command
 } from '@aws-sdk/client-s3';
+import fs from 'fs';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { r2Client } from '../config/r2';
 import { env } from '../config/env';
@@ -47,6 +48,23 @@ export class R2Service {
       ContentType: contentType,
     });
     return getSignedUrl(r2Client, command, { expiresIn });
+  }
+
+  /**
+   * Uploads a local file to R2 directly.
+   * @param r2Key The object key in R2
+   * @param localPath The local file path
+   * @param contentType The MIME type of the file
+   */
+  static async uploadFile(r2Key: string, localPath: string, contentType: string): Promise<void> {
+    const fileStream = fs.createReadStream(localPath);
+    const command = new PutObjectCommand({
+      Bucket: env.R2_BUCKET_NAME,
+      Key: r2Key,
+      Body: fileStream,
+      ContentType: contentType,
+    });
+    await r2Client.send(command);
   }
 
   /**
