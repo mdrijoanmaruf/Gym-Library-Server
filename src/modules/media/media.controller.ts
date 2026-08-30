@@ -194,11 +194,11 @@ export class MediaController {
 
       // 1. Download file from R2
       const objectStream = await R2Service.getObjectStream(asset.r2Key);
-      if (!objectStream) return next(new AppError('File not found in R2', 404, 'NOT_FOUND'));
+      if (!objectStream || !objectStream.Body) return next(new AppError('File not found in R2', 404, 'NOT_FOUND'));
       
       await new Promise<void>((resolve, reject) => {
         const fileStream = fs.createWriteStream(inputPath);
-        (objectStream as any).pipe(fileStream);
+        (objectStream.Body as NodeJS.ReadableStream).pipe(fileStream);
         fileStream.on('finish', resolve);
         fileStream.on('error', reject);
       });
@@ -244,25 +244,71 @@ export class MediaController {
           .run();
       });
 
-      // 3. Upload back to R2 (overwrite existing key)
-      await R2Service.uploadFile(asset.r2Key, outputPath, 'video/mp4');
+      // 3. Generate new R2 key and upload
+      const timestamp = Date.now();
+      const newR2Key = `${asset.r2Key.replace(/\.mp4$/, '')}_processed_${timestamp}.mp4`;
+      await R2Service.uploadFile(newR2Key, outputPath, 'video/mp4');
 
-      // 4. Cleanup temp files
+      // 4. Update asset and delete old processed file if needed
+      const oldR2Key = asset.r2Key;
+      
+      if (!asset.originalR2Key) {
+        asset.originalR2Key = oldR2Key; // First time processing, save original
+      } else if (oldR2Key !== asset.originalR2Key) {
+        // Already processed before, delete the old processed file
+        await R2Service.deleteObject(oldR2Key).catch(console.error);
+      }
+
+      asset.r2Key = newR2Key;
+
+      // 5. Cleanup temp files
       fs.unlinkSync(inputPath);
       fs.unlinkSync(outputPath);
 
-      // 5. Optionally recalculate duration and save
-      // For simplicity, we can set it to the trim difference divided by speed if they exist
+      // 6. Optionally recalculate duration and save
       if (trimEnd !== undefined && trimStart !== undefined) {
         asset.durationSeconds = (trimEnd - trimStart) / (speed || 1);
-        await asset.save();
       }
+      
+      await asset.save();
 
-      res.json({ success: true, message: 'Video processed successfully' });
+      res.json({ success: true, message: 'Video processed successfully', asset });
 
     } catch (error) {
       console.error("FFMPEG Processing Error:", error);
       next(new AppError('Failed to process video', 500, 'SERVER_ERROR'));
+    }
+  }
+
+  /** POST /api/media/:id/restore
+   *  Restore the original video.
+   */
+  static async restoreOriginal(req: Request, res: Response, next: NextFunction) {
+    try {
+      const asset = await MediaAsset.findById(req.params.id);
+      if (!asset) return next(new AppError('Media not found', 404, 'NOT_FOUND'));
+      if (!asset.originalR2Key) return next(new AppError('Original video not found', 400, 'BAD_REQUEST'));
+
+      const processedKey = asset.r2Key;
+      
+      // Restore the original key
+      asset.r2Key = asset.originalR2Key;
+      asset.originalR2Key = undefined;
+
+      // Reset duration calculation (optional, ideally we'd fetch original duration but leaving blank works as it will fall back to video element)
+      asset.durationSeconds = undefined;
+
+      await asset.save();
+
+      // Delete the processed file from storage
+      if (processedKey !== asset.r2Key) {
+        await R2Service.deleteObject(processedKey).catch(console.error);
+      }
+
+      res.json({ success: true, message: 'Original video restored', asset });
+    } catch (error) {
+      console.error("Restore Error:", error);
+      next(new AppError('Failed to restore video', 500, 'SERVER_ERROR'));
     }
   }
 

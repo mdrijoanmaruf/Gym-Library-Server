@@ -9,6 +9,7 @@ export interface IMediaAsset extends Document {
   category: string;
   type: MediaType;
   r2Key: string;
+  originalR2Key?: string;
   thumbnailR2Key?: string;
   durationSeconds?: number;
   difficulty: Difficulty;
@@ -31,6 +32,7 @@ const MediaAssetSchema = new Schema<IMediaAsset>(
     category: { type: String, required: true, index: true },
     type: { type: String, enum: ['gif', 'video'], required: true, index: true },
     r2Key: { type: String, required: true, unique: true },
+    originalR2Key: { type: String },
     thumbnailR2Key: { type: String },
     durationSeconds: { type: Number },
     difficulty: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner' },

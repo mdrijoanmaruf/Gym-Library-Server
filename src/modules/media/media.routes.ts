@@ -18,6 +18,7 @@ router.use(authenticate);
 router.post('/upload-url', requireAdmin, asyncHandler(MediaController.getUploadUrl));
 router.post('/', requireAdmin, asyncHandler(MediaController.create));
 router.post('/:id/process', requireAdmin, asyncHandler(MediaController.processVideo));
+router.post('/:id/restore', requireAdmin, asyncHandler(MediaController.restoreOriginal));
 router.patch('/:id', requireAdmin, asyncHandler(MediaController.update));
 router.delete('/:id', requireAdmin, asyncHandler(MediaController.delete));
 
