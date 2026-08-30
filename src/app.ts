@@ -8,6 +8,7 @@ import authRoutes from './modules/auth/auth.routes';
 import mediaRoutes from './modules/media/media.routes';
 import savedExerciseRoutes from './modules/savedExercise/savedExercise.routes';
 import messageRoutes from './modules/messages/message.routes';
+import userRoutes from './modules/users/user.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/saved-exercises', savedExerciseRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/users', userRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

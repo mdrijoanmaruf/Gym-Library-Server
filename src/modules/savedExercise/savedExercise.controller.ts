@@ -40,13 +40,11 @@ export class SavedExerciseController {
 
     const savedExercises = await SavedExercise.find(query)
       .populate('mediaId')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     // Filter by category if needed (since category is inside the populated mediaId)
-    let results = savedExercises.map(se => ({
-      ...se.toObject(),
-      mediaId: se.mediaId, // Populated IMediaAsset
-    }));
+    let results = savedExercises as any[];
 
     if (category && category !== 'All') {
       results = results.filter(se => (se.mediaId as any).category === category);

@@ -10,6 +10,7 @@ export interface IUser extends Document {
   role: UserRole;
   status: UserStatus;
   image?: string;
+  dayAliases?: Map<string, string>;
   refreshTokens: string[];
   passwordResetToken?: string;
   passwordResetExpires?: Date;
@@ -39,6 +40,11 @@ const UserSchema = new Schema<IUser>(
       default: 'pending',
     },
     image: { type: String },
+    dayAliases: {
+      type: Map,
+      of: String,
+      default: {},
+    },
     refreshTokens: [{ type: String }],
     passwordResetToken: { type: String },
     passwordResetExpires: { type: Date },
