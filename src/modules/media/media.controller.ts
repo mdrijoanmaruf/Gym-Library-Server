@@ -19,7 +19,7 @@ export class MediaController {
     const skip = (pageNum - 1) * limitNum;
 
     const [data, total] = await Promise.all([
-      MediaAsset.find(filter).sort({ category: 1, title: 1 }).skip(skip).limit(limitNum).lean(),
+      MediaAsset.find(filter).sort({ featured: -1, order: 1, category: 1, title: 1 }).skip(skip).limit(limitNum).lean(),
       MediaAsset.countDocuments(filter),
     ]);
 

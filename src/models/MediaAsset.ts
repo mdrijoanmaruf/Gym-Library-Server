@@ -17,6 +17,8 @@ export interface IMediaAsset extends Document {
   description?: string;
   tags: string[];
   isPublished: boolean;
+  featured: boolean;
+  order: number;
   viewCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -37,6 +39,8 @@ const MediaAssetSchema = new Schema<IMediaAsset>(
     description: { type: String },
     tags: [{ type: String }],
     isPublished: { type: Boolean, default: true, index: true },
+    featured: { type: Boolean, default: false, index: true },
+    order: { type: Number, default: 999999, index: true },
     viewCount: { type: Number, default: 0 },
   },
   { timestamps: true }
